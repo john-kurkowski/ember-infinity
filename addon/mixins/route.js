@@ -200,6 +200,21 @@ const RouteMixin = Ember.Mixin.create({
   },
 
   /**
+   Hook called whenever any page of the infinity model is requested, before the
+   promise is resolved. This is called whether the request is initiated by
+   `this.infinityModel` or an action. This lets you perform additional `.then`
+   or `.catch` logic, or execute side-effects in your app. Defaults to
+   returning the promise unchanged.
+
+   @method onInfinityModelFind
+   @param {Function} infinityModelPromise The promise of the Ember store find method. Passed in automatically.
+   @return {Ember.RSVP.Promise}
+  */
+  onInfinityModelFind(infinityModelPromise) {
+    return infinityModelPromise;
+  },
+
+  /**
    Call additional functions after finding the infinityModel in the Ember data store.
    @private
    @method _afterInfinityModel
@@ -266,7 +281,8 @@ const RouteMixin = Ember.Mixin.create({
     const nextPage    = this.incrementProperty('currentPage');
     const params      = this._buildParams(nextPage);
 
-    return this.get('store')[this._storeFindMethod](modelName, params).then(
+    const find = this.get('store')[this._storeFindMethod](modelName, params);
+    return this.onInfinityModelFind(find).then(
       this._afterInfinityModel(this));
   },
 
