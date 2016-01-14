@@ -100,7 +100,7 @@ function isScrolledIntoView(el) {
   el = el.parentNode;
   do {
     rect = el.getBoundingClientRect();
-    if (top <= rect.bottom === false) {
+    if (top > rect.bottom) {
       return false;
     }
     el = el.parentNode;
