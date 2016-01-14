@@ -157,22 +157,30 @@ const RouteMixin = Ember.Mixin.create({
 
   /**
     Use the infinityModel method in the place of `this.store.find('model')` to
-    initialize the Infinity Model for your route.
+    initialize the Infinity Model for your route. If you're not using Ember
+    Data, instead of the model name, pass a function taking an ember-infinity
+    pagination options, and returning a Promise(Ember.ArrayProxy);
 
     @method infinityModel
-    @param {String} modelName The name of the model.
+    @param {String|Function} modelNameOrFindFunction The name of the Ember Data model, OR a function taking an ember-infinity pagination options object and returning a Promise(Ember.ArrayProxy).
     @param {Object} options Optional, the perPage and startingPage to load from.
     @param {Object} boundParams Optional, any route properties to be included as additional params.
     @return {Ember.RSVP.Promise}
   */
-  infinityModel(modelName, options, boundParams) {
-    if (emberDataVersionIs('lessThan', '1.13.0')) {
-      this.set('_storeFindMethod', 'find');
+  infinityModel(modelNameOrFindFunction, options, boundParams) {
+    if (typeof modelNameOrFindFunction === 'string') {
+      if (emberDataVersionIs('lessThan', '1.13.0')) {
+        this.set('_storeFindMethod', 'find');
+      }
+
+      this.set('_infinityModelName', modelName);
+
+      this._ensureCompatibility();
+    } else if (typeof modelNameOrFindFunction === 'function') {
+      this.set('_storeFindMethod', modelNameOrFindFunction);
+    } else {
+      throw new Ember.Error(`Ember Infinity: Unsupported first argument to infinityModel: ${modelNameOrFindFunction}`);
     }
-
-    this.set('_infinityModelName', modelName);
-
-    this._ensureCompatibility();
 
     options = options ? Ember.merge({}, options) : {};
     const startingPage = options.startingPage === undefined ? 0 : options.startingPage-1;
@@ -262,11 +270,17 @@ const RouteMixin = Ember.Mixin.create({
    @returns {Ember.RSVP.Promise} A Promise that resolves the next page of objects
    */
   _requestNextPage() {
-    const modelName   = this.get('_infinityModelName');
     const nextPage    = this.incrementProperty('currentPage');
     const params      = this._buildParams(nextPage);
 
-    return this.get('store')[this._storeFindMethod](modelName, params).then(
+    const storeFindMethod = this.get('_storeFindMethod');
+    let find;
+    if (typeof storeFindMethod === 'function') {
+      find = storeFindMethod(params);
+    } else {
+      find = this.get('store')[storeFindMethod](this.get('_infinityModelName'), params);
+    }
+    return find.then(
       this._afterInfinityModel(this));
   },
 
