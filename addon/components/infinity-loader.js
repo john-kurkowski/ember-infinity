@@ -39,28 +39,14 @@ const InfinityLoaderComponent = Ember.Component.extend({
     this.get('_scrollable').off(`${eventName}.${this.get('guid')}`);
   },
 
-  _selfOffset() {
-    if (this.get('_customScrollableIsDefined')) {
-      return this.$().position().top + this.get("_scrollable").scrollTop();
-    } else {
-      return this.$().offset().top;
-    }
-  },
-
-  _bottomOfScrollableOffset() {
-    return this.get('_scrollable').height() + this.get("_scrollable").scrollTop();
-  },
-
-  _triggerOffset() {
-    return this._selfOffset() - this.get('triggerOffset');
-  },
-
   _shouldLoadMore() {
-    if (this.get('developmentMode')) {
+    if (this.get('isDestroyed') || this.get('isDestroying')) {
+      return false;
+    } else if (this.get('developmentMode')) {
       return false;
     }
 
-    return this._bottomOfScrollableOffset() > this._triggerOffset();
+    return isScrolledIntoView(this.$()[0], this.get('triggerOffset'));
   },
 
   _loadMoreIfNeeded() {
@@ -80,10 +66,8 @@ const InfinityLoaderComponent = Ember.Component.extend({
       } else {
         throw new Error("Ember Infinity: No scrollable element found for: " + scrollable);
       }
-      this.set('_customScrollableIsDefined', true);
     } else if (scrollable === undefined || scrollable === null) {
       this.set('_scrollable', Ember.$(window));
-      this.set('_customScrollableIsDefined', false);
     } else {
       throw new Error("Ember Infinity: Scrollable must either be a css selector string or left empty to default to window");
     }
@@ -104,6 +88,25 @@ if (emberVersionIs('lessThan', '1.13.0')) {
   InfinityLoaderComponent.reopen({
     hasBlock: Ember.computed.alias('template')
   });
+}
+
+/*
+  Check if element has scrolled into the viewport. Works if the element is
+  within a scrollable container, too. Yields true `triggerOffset` pixels early,
+  if provided. Forked from http://stackoverflow.com/a/21627295/62269.
+*/
+function isScrolledIntoView(el, triggerOffset = 0) {
+  var top = el.getBoundingClientRect().top;
+  var rect;
+  el = el.parentNode;
+  do {
+    rect = el.getBoundingClientRect();
+    if (top > rect.bottom) {
+      return false;
+    }
+    el = el.parentNode;
+  } while (el !== document.body);
+  return top - triggerOffset <= document.documentElement.clientHeight;
 }
 
 export default InfinityLoaderComponent;
