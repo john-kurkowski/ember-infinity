@@ -46,7 +46,7 @@ const InfinityLoaderComponent = Ember.Component.extend({
       return false;
     }
 
-    return isScrolledIntoView(this.$()[0]);
+    return isScrolledIntoView(this.$()[0], this.get('triggerOffset'));
   },
 
   _loadMoreIfNeeded() {
@@ -92,9 +92,10 @@ if (emberVersionIs('lessThan', '1.13.0')) {
 
 /*
   Check if element has scrolled into the viewport. Works if the element is
-  within a scrollable container, too. From http://stackoverflow.com/a/21627295/62269.
+  within a scrollable container, too. Yields true `triggerOffset` pixels early,
+  if provided. Forked from http://stackoverflow.com/a/21627295/62269.
 */
-function isScrolledIntoView(el) {
+function isScrolledIntoView(el, triggerOffset = 0) {
   var top = el.getBoundingClientRect().top;
   var rect;
   el = el.parentNode;
@@ -105,7 +106,7 @@ function isScrolledIntoView(el) {
     }
     el = el.parentNode;
   } while (el !== document.body);
-  return top <= document.documentElement.clientHeight;
+  return top - triggerOffset <= document.documentElement.clientHeight;
 }
 
 export default InfinityLoaderComponent;
